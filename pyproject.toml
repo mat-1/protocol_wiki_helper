@@ -1,0 +1,25 @@
+[project]
+name = "mcwiki-protocol-scripts"
+version = "0.1.0"
+description = "Add your description here"
+authors = [{ name = "mat", email = "git@matdoes.dev" }]
+dependencies = ["requests>=2.32.3", "jawa>=2.2.0", "six>=1.17.0"]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[project.scripts]
+"mcwiki-protocol-scripts" = "mcwiki_protocol_scripts:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcwiki_protocol_scripts"]
