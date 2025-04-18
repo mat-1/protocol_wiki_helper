@@ -145,7 +145,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mcwiki-protocol-scripts"
+name = "protocol-wiki-helper"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

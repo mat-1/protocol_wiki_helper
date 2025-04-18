@@ -28,7 +28,7 @@ if os.environ.get('NO_COLOR'):
 def main():
     parser = argparse.ArgumentParser(
         prog='protocol_wiki_helper',
-        description='A tool for helping update pages on the Minecraft Wiki protocol pages.',
+        description='A tool for helping update certain protocol-related articles on the Minecraft Wiki.',
     )
 
     parser.add_argument(

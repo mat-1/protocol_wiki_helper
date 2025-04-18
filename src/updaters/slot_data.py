@@ -1,4 +1,3 @@
-import json
 import sys
 from ..context import UpdateContext
 
@@ -12,8 +11,6 @@ def update(ctx: UpdateContext, text: str) -> str:
     lines = text.splitlines()
 
     wiki_data, start_i, end_i = parse(lines)
-
-    print(json.dumps(wiki_data))
 
     lines[start_i : end_i + 1] = gen_slot_data(
         wiki_data, registries_report
@@ -63,7 +60,6 @@ def parse(lines: list[str]) -> tuple[dict, int, int]:
                         end_i = i
                         break
                 description += line + '\n'
-            print(resource_id)
             data[resource_id] = description
 
     return data, start_i, end_i
