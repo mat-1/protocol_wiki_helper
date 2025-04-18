@@ -1,17 +1,22 @@
+from ...datagen.mappings import Mappings
+from ...datagen.utils import to_snake_case
+from .util import (
+    determine_field_default,
+    generate_metadata_names,
+)
 
-from lib.utils import to_snake_case
-from lib.mappings import Mappings
-from .mod import determine_field_default, generate_metadata_names, read_text, replace_lines
+
+def update(text: str, burger_entities_data: dict, mappings: Mappings) -> str:
+    lines = text.splitlines()
+    parsed, start_i, end_i = parse(lines)
+    new_metadata_table_text = gen(parsed, burger_entities_data, mappings)
+
+    lines[start_i + 2 : end_i] = new_metadata_table_text.splitlines()
+
+    return '\n'.join(lines)
 
 
-def update(burger_entities_data: dict, mappings: Mappings):
-    text = read_text()
-    parsed, start_i, end_i = parse(text)
-    # print(json.dumps(parsed))
-    new_text = gen(parsed, burger_entities_data, mappings)
-    replace_lines(new_text, start_i + 2, end_i)
-
-def parse(text: str) -> tuple[list, int, int]:
+def parse(lines: list[str]) -> tuple[list, int, int]:
     in_entity_metadata_section = False
     is_before_table = True
     is_after_table = False
@@ -53,12 +58,18 @@ def parse(text: str) -> tuple[list, int, int]:
         finish_field()
 
         if entry_display_name:
-            entry_data['wikitext_before'] = entry_data.get('wikitext_before', '').strip()
+            entry_data['wikitext_before'] = entry_data.get(
+                'wikitext_before', ''
+            ).strip()
             entry_data['wikitext_after'] = entry_data.get('wikitext_after', '').strip()
 
             if 'No additional metadata.' in entry_data['wikitext_before']:
                 assert 'metadata' not in entry_data
-                entry_data['wikitext_before'] = entry_data['wikitext_before'].replace('No additional metadata.', '').strip()
+                entry_data['wikitext_before'] = (
+                    entry_data['wikitext_before']
+                    .replace('No additional metadata.', '')
+                    .strip()
+                )
                 entry_data['metadata'] = []
 
             entries[entry_display_name] = entry_data
@@ -70,11 +81,11 @@ def parse(text: str) -> tuple[list, int, int]:
         is_before_table = True
         is_after_table = False
 
-
     def finish_field():
         nonlocal current_metadata_field, in_bit_mask, current_mask, entry_data
 
-        if current_metadata_field == {}: return
+        if current_metadata_field == {}:
+            return
 
         current_metadata_field['default'] = current_metadata_field['default'].strip()
 
@@ -85,7 +96,6 @@ def parse(text: str) -> tuple[list, int, int]:
         entry_data['metadata'].append(current_metadata_field)
         current_metadata_field = {}
 
-    lines = text.splitlines()
     if section_end_i < 0:
         section_end_i = len(lines) + section_end_i
 
@@ -97,13 +107,13 @@ def parse(text: str) -> tuple[list, int, int]:
             continue
         if not in_entity_metadata_section:
             continue
-            
+
         if line.startswith('=== '):
             # start of a new entity
             finish_entry()
             entry_display_name = line.strip('=').strip()
             continue
-        
+
         if line.lower().startswith('{{metadata inherit|'):
             # {{Metadata inherit|Fireball|inherits=Entity}}
             line = line[2:-2]
@@ -114,12 +124,12 @@ def parse(text: str) -> tuple[list, int, int]:
 
             if len(parts) > 2:
                 assert parts[2].startswith('inherits=')
-                extends = parts[2][len('inherits='):]
+                extends = parts[2][len('inherits=') :]
                 entry_data['extends'] = extends
             else:
                 extends = None
                 entry_data['extends'] = None
-            
+
             assert is_before_table
             assert not is_after_table
             continue
@@ -150,7 +160,7 @@ def parse(text: str) -> tuple[list, int, int]:
                     new_meaning['main'] = current_metadata_field['meaning']
                 current_metadata_field['meaning'] = new_meaning
                 print('ok, entering bit mask')
-            elif line == ' |}':
+            elif line.strip() == '|}':
                 # leaving table
                 is_after_table = True
                 continue
@@ -182,28 +192,39 @@ def parse(text: str) -> tuple[list, int, int]:
                     current_metadata_field['meaning'][current_mask] += meaning
                 elif not line.startswith(' |'):
                     if current_mask is not None:
-                       current_metadata_field['meaning'][current_mask] += '\n' + line
+                        current_metadata_field['meaning'][current_mask] += '\n' + line
             else:
                 if line.replace(' ', '').startswith('|colspan="2"|'):
                     # `meaning` lines start with this
-                    current_metadata_field['meaning'] = line.split('|', 2)[-1]
+                    current_metadata_field['meaning'] = line.split('|', 2)[-1].strip()
                     print('parsed meaning', current_metadata_field['meaning'])
-                elif not line.startswith(' | {{') and 'meaning' in current_metadata_field and 'default' not in current_metadata_field and not line.startswith(' | '):
+                elif (
+                    not line.startswith(' | {{')
+                    and 'meaning' in current_metadata_field
+                    and 'default' not in current_metadata_field
+                    and not line.startswith(' | ')
+                ):
                     # must be a multiline meaning
                     current_metadata_field['meaning'] += '\n' + line
-                elif not line.startswith(' | {{') and 'meaning' in current_metadata_field and line.startswith(' | '):
+                elif (
+                    not line.startswith(' | {{')
+                    and 'meaning' in current_metadata_field
+                    and line.startswith(' | ')
+                ):
                     # if it doesn't match that, then it must be a `default`
-                    print('parsed default', line[len(' | '):])
+                    print('parsed default', line[len(' | ') :])
                     if 'default' not in current_metadata_field:
                         current_metadata_field['default'] = ''
-                    current_metadata_field['default'] += line[len(' | '):] + '\n'
-
+                    current_metadata_field['default'] += line[len(' | ') :] + '\n'
 
     finish_entry()
 
     return (entries, section_start_i, section_end_i)
 
-def gen(parsed_entity_metadata_tables: list, burger_entities_data: dict, mappings: Mappings) -> str:
+
+def gen(
+    parsed_entity_metadata_tables: list, burger_entities_data: dict, mappings: Mappings
+) -> str:
     content = ''
 
     entities_map = burger_entities_data['entity']
@@ -211,21 +232,28 @@ def gen(parsed_entity_metadata_tables: list, burger_entities_data: dict, mapping
     # sort by name first
     entity_resource_ids_partially_sorted.sort()
     # then sort by id (and put the abstract entities last - they have no id)
-    entity_resource_ids_partially_sorted.sort(key=lambda x: entities_map[x].get('id', 999999))
+    entity_resource_ids_partially_sorted.sort(
+        key=lambda x: entities_map[x].get('id', 999999)
+    )
 
     entity_resource_ids_organized = ['~abstract_entity']
+
     # recursively sort them so entities are always immediately after their parents
     def traverse(parent: str):
         for entity_resource_id in entity_resource_ids_partially_sorted:
-            if entity_resource_id == '~abstract_entity': continue
+            if entity_resource_id == '~abstract_entity':
+                continue
             entity = entities_map[entity_resource_id]
             extends = entity['metadata'][0]['entity']
             if extends == parent:
                 entity_resource_ids_organized.append(entity_resource_id)
                 traverse(entity_resource_id)
+
     traverse('~abstract_entity')
-    
-    data_serializer_names = generate_metadata_names(burger_entities_data['dataserializers'], mappings)
+
+    data_serializer_names = generate_metadata_names(
+        burger_entities_data['dataserializers'], mappings
+    )
 
     content = ''
     for entity_resource_id in entity_resource_ids_organized:
@@ -248,7 +276,8 @@ def gen(parsed_entity_metadata_tables: list, burger_entities_data: dict, mapping
             '~abstract_raider': 'Raider',
             '~abstract_spellcaster_illager': 'Spellcaster Illager',
             '~abstract_chested_horse': 'Chested Horse',
-
+            '~abstract_vehicle': 'Abstract Vehicle',
+            '~abstract_piglin': 'Base Piglin',
             # # incorrect Minecraft Wiki names go here, they'll get replaced by
             # # the correct en_us.json names
             # 'experience_bottle': 'Thrown Experience Bottle',
@@ -271,13 +300,18 @@ def gen(parsed_entity_metadata_tables: list, burger_entities_data: dict, mapping
 
         def get_name_from_map(resource_id):
             new_name = entity_name_map.get(resource_id)
-            if new_name: return new_name
+            if new_name:
+                return new_name
             if resource_id.startswith('~abstract_'):
                 return resource_id[1:].replace('_', ' ').title()
             return None
 
-        entity_old_wiki_name = get_name_from_map(entity_resource_id) or entity['display_name']
-        entity_display_name = entity.get('display_name') or get_name_from_map(entity_resource_id)
+        entity_old_wiki_name = (
+            get_name_from_map(entity_resource_id) or entity['display_name']
+        )
+        entity_display_name = entity.get('display_name') or get_name_from_map(
+            entity_resource_id
+        )
 
         assert entity_old_wiki_name is not None
         assert entity_display_name is not None
@@ -285,14 +319,13 @@ def gen(parsed_entity_metadata_tables: list, burger_entities_data: dict, mapping
         wiki_entity = parsed_entity_metadata_tables.get(entity_old_wiki_name)
 
         print(entity_old_wiki_name, entity_display_name, wiki_entity)
-        if entity_resource_id not in {
-            'bamboo_chest_raft', 'bamboo_raft', 'breeze_wind_charge', 'experience_orb',
-            'leash_knot', 'lightning_bolt', 'marker', 'ominous_item_spawner', 'shulker_bullet',
-            'wind_charge', 'magma_cube', '~abstract_creature', 'allay', 'pufferfish', 'glow_squid',
-            'armadillo', 'bogged', 'breeze', 'creaking', 'cave_spider',
-        } and not entity_resource_id.endswith('_boat'):
-            assert wiki_entity is not None
-
+        # if entity_resource_id not in {
+        #     'bamboo_chest_raft', 'bamboo_raft', 'breeze_wind_charge', 'experience_orb',
+        #     'leash_knot', 'lightning_bolt', 'marker', 'ominous_item_spawner', 'shulker_bullet',
+        #     'wind_charge', 'magma_cube', '~abstract_creature', 'allay', 'pufferfish', 'glow_squid',
+        #     'armadillo', 'bogged', 'breeze', 'creaking', 'cave_spider',
+        # } and not entity_resource_id.endswith('_boat'):
+        #     assert wiki_entity is not None
 
         if entity_resource_id == '~abstract_entity':
             entity_inherits = None
@@ -300,34 +333,37 @@ def gen(parsed_entity_metadata_tables: list, burger_entities_data: dict, mapping
         else:
             # the list is of all the parents and then the entity itself
             entity_inherits = entity['metadata'][0]['entity']
-            entity_metadata = entity['metadata'][-1] if len(entity['metadata']) > 1 else None
+            entity_metadata = (
+                entity['metadata'][-1] if len(entity['metadata']) > 1 else None
+            )
         print('inherits', entity_inherits)
-
 
         # === Interaction ===
         content += f'=== {entity_display_name} ===\n'
-        content += f'\n'
+        content += '\n'
         if entity_inherits:
-            entity_inherits_display_name = entities_map[entity_inherits].get('display_name') or get_name_from_map(entity_inherits)
+            entity_inherits_display_name = entities_map[entity_inherits].get(
+                'display_name'
+            ) or get_name_from_map(entity_inherits)
             content += f'{{{{Metadata inherit|{entity_display_name}|inherits={entity_inherits_display_name}}}}}\n'
         else:
             content += f'{{{{Metadata inherit|{entity_display_name}}}}}\n'
-        content += f'\n'
+        content += '\n'
 
         if wiki_entity and wiki_entity['wikitext_before']:
             content += f'{wiki_entity["wikitext_before"]}\n'
-            content += f'\n'
+            content += '\n'
 
         if not entity_metadata:
-            content += f'No additional metadata.\n'
-            content += f'\n'
+            content += 'No additional metadata.\n'
+            content += '\n'
             continue
 
-        content += f'{{| class="wikitable"\n'
-        content += f' ! Index\n'
-        content += f' ! Type\n'
-        content += f' !style="width: 250px;" colspan="2"| Meaning\n'
-        content += f' ! Default\n'
+        content += '{| class="wikitable"\n'
+        content += ' ! Index\n'
+        content += ' ! Type\n'
+        content += ' !style="width: 250px;" colspan="2"| Meaning\n'
+        content += ' ! Default\n'
 
         print('entity_metadata', entity_metadata)
 
@@ -348,7 +384,7 @@ def gen(parsed_entity_metadata_tables: list, burger_entities_data: dict, mapping
                         if metadata_field['serializer'] == 'Byte':
                             known_bitfield_field_index = i
                             break
-                assert known_bitfield_field_index is not None            
+                assert known_bitfield_field_index is not None
 
         for i, metadata_field in enumerate(entity_metadata['data']):
             print(i, metadata_field)
@@ -359,62 +395,88 @@ def gen(parsed_entity_metadata_tables: list, burger_entities_data: dict, mapping
                 except IndexError:
                     pass
                 print('  wiki_metadata_field', wiki_metadata_field)
-            
-            mojmap_field_name = mappings.get_field(entity_metadata['class'], metadata_field['field'])
+
+            mojmap_field_name = mappings.get_field(
+                entity_metadata['class'], metadata_field['field']
+            )
 
             cleaned_mojmap_field_name = mojmap_field_name
             if cleaned_mojmap_field_name.startswith('DATA_ID_'):
-                cleaned_mojmap_field_name = cleaned_mojmap_field_name[len('DATA_ID_'):]
+                cleaned_mojmap_field_name = cleaned_mojmap_field_name[len('DATA_ID_') :]
             elif cleaned_mojmap_field_name.startswith('DATA_'):
-                cleaned_mojmap_field_name = cleaned_mojmap_field_name[len('DATA_'):]
-            cleaned_mojmap_field_name = cleaned_mojmap_field_name.replace('_', ' ').lower()
+                cleaned_mojmap_field_name = cleaned_mojmap_field_name[len('DATA_') :]
+            cleaned_mojmap_field_name = cleaned_mojmap_field_name.replace(
+                '_', ' '
+            ).lower()
             # upper first letter
-            cleaned_mojmap_field_name = cleaned_mojmap_field_name[0].upper() + cleaned_mojmap_field_name[1:]
+            cleaned_mojmap_field_name = (
+                cleaned_mojmap_field_name[0].upper() + cleaned_mojmap_field_name[1:]
+            )
 
             metadata_field_type = data_serializer_names[metadata_field['serializer_id']]
-            metadata_field_meaning = wiki_metadata_field['meaning'] if wiki_metadata_field else f'TODO: {cleaned_mojmap_field_name}'
-            metadata_field_default = wiki_metadata_field['default'] if wiki_metadata_field else determine_field_default(metadata_field.get('default'), metadata_field_type)
+            metadata_field_meaning = (
+                wiki_metadata_field['meaning']
+                if wiki_metadata_field
+                else f'TODO: {cleaned_mojmap_field_name}'
+            )
+            metadata_field_default = (
+                wiki_metadata_field['default']
+                if wiki_metadata_field
+                else determine_field_default(
+                    metadata_field.get('default'), metadata_field_type
+                )
+            )
 
             # |-
             # | {{Metadata id|}}
             # | {{Metadata type|Position}}
             # |colspan="2"| Home pos
             # | (0, 0, 0)
-            content += f' |-\n'
+            content += ' |-\n'
             if known_bitfield_field_index == i:
                 bitfields = entity_metadata['bitfields']
-                wiki_bitfields = wiki_metadata_field['meaning'] if (wiki_metadata_field and isinstance(wiki_metadata_field['meaning'], dict)) else None
+                wiki_bitfields = (
+                    wiki_metadata_field['meaning']
+                    if (
+                        wiki_metadata_field
+                        and isinstance(wiki_metadata_field['meaning'], dict)
+                    )
+                    else None
+                )
 
-                main_bitfield_meaning = wiki_bitfields.get('main') if wiki_bitfields else None
+                main_bitfield_meaning = (
+                    wiki_bitfields.get('main') if wiki_bitfields else None
+                )
                 if main_bitfield_meaning:
                     del wiki_bitfields['main']
 
                 if bitfields == []:
                     # must be a field that's only considered a bitfield by the wiki, so fill the list with whatever the wiki says
                     for mask, _meaning in wiki_bitfields.items():
-                        bitfields.append({
-                            'mask': int(mask)
-                        })
+                        bitfields.append({'mask': int(mask)})
+
+                skip_filling_unused = False
+
                 # hardcoded fixes for some entities
                 if entity_resource_id == '~abstract_horse':
                     # is mouth open
-                    bitfields.append({ 'mask': 0x40 })
+                    bitfields.append({'mask': 0x40})
+                if entity_resource_id == 'sheep':
+                    # Color ID
+                    bitfields.append({'mask': 0x0F})
+                    skip_filling_unused = True
 
-
-
-                # add the missing bitfield masks
-                current_mask = 1
-                print('bitfields', bitfields)
-                print('wiki_bitfields', wiki_bitfields)
-                highest_mask = max(bitfield['mask'] for bitfield in bitfields)
-                old_bitfield_masks = set(bitfield['mask'] for bitfield in bitfields)
-                while current_mask <= highest_mask:
-                    if current_mask not in old_bitfield_masks:
-                        bitfields.append({
-                            'mask': current_mask
-                        })
-                    current_mask *= 2
-
+                if not skip_filling_unused:
+                    # add the missing bitfield masks
+                    current_mask = 1
+                    print('bitfields', bitfields)
+                    print('wiki_bitfields', wiki_bitfields)
+                    highest_mask = max(bitfield['mask'] for bitfield in bitfields)
+                    old_bitfield_masks = set(bitfield['mask'] for bitfield in bitfields)
+                    while current_mask <= highest_mask:
+                        if current_mask not in old_bitfield_masks:
+                            bitfields.append({'mask': current_mask})
+                        current_mask *= 2
 
                 bitfields_rowspan = len(bitfields) + 1
                 if main_bitfield_meaning:
@@ -423,41 +485,61 @@ def gen(parsed_entity_metadata_tables: list, burger_entities_data: dict, mapping
                 content += f' |rowspan="{bitfields_rowspan}"| {{{{Metadata type|{metadata_field_type}}}}}\n'
                 if main_bitfield_meaning:
                     content += f' |colspan="2"| {main_bitfield_meaning}\n'
-                    content += f' |rowspan="{bitfields_rowspan}"| {metadata_field_default}\n'
-                    content += f' |-\n'
-                    content += f' ! Bit mask\n'
-                    content += f' ! Meaning\n'
+                    content += (
+                        f' |rowspan="{bitfields_rowspan}"| {metadata_field_default}\n'
+                    )
+                    content += ' |-\n'
+                    content += ' ! Bit mask\n'
+                    content += ' ! Meaning\n'
                 else:
-                    content += f' ! Bit mask\n'
-                    content += f' ! Meaning\n'
-                    content += f' |rowspan="{bitfields_rowspan}"| {metadata_field_default}\n'
-                
+                    content += ' ! Bit mask\n'
+                    content += ' ! Meaning\n'
+                    content += (
+                        f' |rowspan="{bitfields_rowspan}"| {metadata_field_default}\n'
+                    )
+
                 # sort bitfields by mask
                 for bitfield in sorted(bitfields, key=lambda x: x['mask']):
                     print('bitfield', bitfield)
-                    bitfield_mojmap_field_name = mappings.get_method(bitfield.get('class') or entity_metadata['class'], bitfield['method'], '') if 'method' in bitfield else None
+                    bitfield_mojmap_field_name = (
+                        mappings.get_method(
+                            bitfield.get('class') or entity_metadata['class'],
+                            bitfield['method'],
+                            '',
+                        )
+                        if 'method' in bitfield
+                        else None
+                    )
                     if bitfield_mojmap_field_name:
-                        cleaned_bitfield_mojmap_field_name = to_snake_case(bitfield_mojmap_field_name)
-                        cleaned_bitfield_mojmap_field_name = cleaned_bitfield_mojmap_field_name.replace('_', ' ').lower()
+                        cleaned_bitfield_mojmap_field_name = to_snake_case(
+                            bitfield_mojmap_field_name
+                        )
+                        cleaned_bitfield_mojmap_field_name = (
+                            cleaned_bitfield_mojmap_field_name.replace('_', ' ').lower()
+                        )
                     else:
                         cleaned_bitfield_mojmap_field_name = None
 
-                    bitfield_meaning = wiki_bitfields.get(bitfield['mask'], "''Unused''") if wiki_bitfields else f'bitfield TODO: {cleaned_bitfield_mojmap_field_name}'
+                    bitfield_meaning = (
+                        wiki_bitfields.get(bitfield['mask'], "''Unused''")
+                        if wiki_bitfields
+                        else f'bitfield TODO: {cleaned_bitfield_mojmap_field_name}'
+                    )
 
-                    content += f' |-\n'
+                    content += ' |-\n'
                     content += f' | 0x{bitfield["mask"]:02X}\n'
                     content += f' | {bitfield_meaning}\n'
             else:
-                content += f' | {{{{Metadata id|}}}}\n'
+                content += ' | {{Metadata id|}}\n'
                 content += f' | {{{{Metadata type|{metadata_field_type}}}}}\n'
                 content += f' |colspan="2"| {metadata_field_meaning}\n'
                 content += f' | {metadata_field_default}\n'
 
-        content += f'|}}\n'
-        content += f'\n'
+        content += '|}\n'
+        content += '\n'
 
         if wiki_entity and wiki_entity['wikitext_after']:
             content += f'{wiki_entity["wikitext_after"]}\n'
-            content += f'\n'
+            content += '\n'
 
     return content

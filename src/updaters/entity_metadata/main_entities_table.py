@@ -1,12 +1,14 @@
-from .mod import read_text, replace_lines
+def update(text: str, burger_entities_data: dict) -> str:
+    lines = text.splitlines()
+
+    parsed, start_i, end_i = parse(lines)
+    new_entities_table_text = gen(parsed, burger_entities_data)
+    lines[start_i : end_i + 1] = new_entities_table_text.splitlines()
+
+    return '\n'.join(lines)
 
 
-def update(burger_entities_data: dict):
-    parsed, start_i, end_i = parse(read_text())
-    new_text = gen(parsed, burger_entities_data)
-    replace_lines(new_text, start_i, end_i + 2)
-
-def parse(text: str) -> tuple[dict, int, int]:
+def parse(lines: list[str]) -> tuple[dict, int, int]:
     in_main_entities_table = False
 
     table_start_i = None
@@ -20,7 +22,7 @@ def parse(text: str) -> tuple[dict, int, int]:
     # { magma_cube: { start_line: '|-', width: '0.5202 * size', height: '0.5202 * size' }  }
     entries = {}
 
-    for i, line in enumerate(text.splitlines()):
+    for i, line in enumerate(lines):
         if line == '{| class="wikitable"':
             in_main_entities_table = True
             table_start_i = i
@@ -32,7 +34,7 @@ def parse(text: str) -> tuple[dict, int, int]:
             in_main_entities_table = False
             table_end_i = i
             break
-            
+
         if line.startswith('|-'):
             entry_position = 0
             entry_start_line = line
@@ -56,7 +58,7 @@ def parse(text: str) -> tuple[dict, int, int]:
             entries[entity_resource_id] = {
                 'start_line': entry_start_line,
                 'width': entry_width,
-                'height': entry_height
+                'height': entry_height,
             }
 
         entry_position += 1
@@ -67,15 +69,15 @@ def parse(text: str) -> tuple[dict, int, int]:
 # update the main entities table
 def gen(parsed_main_entities_table: dict, burger_entities_data: dict) -> str:
     content = ''
-        
-    content += '''{| class="wikitable"
+
+    content += """{| class="wikitable"
 |- 
 ! Type
 ! Name
 ! bounding box x and z
 ! bounding box y
 ! ID
-'''
+"""
 
     entities = burger_entities_data['entity'].items()
     # filter by id
@@ -106,7 +108,7 @@ def gen(parsed_main_entities_table: dict, burger_entities_data: dict) -> str:
             start_line = old_entity['start_line']
             entity_width = old_entity['width']
             entity_height = old_entity['height']
-        
+
         entry_content = ''
         entry_content += f'{start_line}\n'
         entry_content += f'| {entity_protocol_id}\n'
@@ -116,6 +118,6 @@ def gen(parsed_main_entities_table: dict, burger_entities_data: dict) -> str:
         entry_content += f'| <code>minecraft:{entity_resource_id}</code>\n'
 
         content += entry_content
-    
+
     content += '|}'
     return content

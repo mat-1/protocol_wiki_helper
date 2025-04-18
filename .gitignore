@@ -1,4 +1,6 @@
 /__cache__
 __pycache__
 
-/contents
+/articles
+.venv
+.ruff_cache

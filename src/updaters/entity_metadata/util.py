@@ -1,6 +1,6 @@
 from typing import Optional
-import wiki_utils
-from lib.mappings import Mappings
+
+from ...datagen.mappings import Mappings
 
 
 def determine_field_default(default: str, serializer: str):
@@ -35,8 +35,12 @@ def generate_metadata_names(burger_dataserializers: dict, mappings: Mappings):
         print(burger_serializer)
 
         # burger gives us the wrong class, so we do this instead
-        data_serializers_class = mappings.get_class_from_deobfuscated_name('net.minecraft.network.syncher.EntityDataSerializers')
-        mojmap_name = mappings.get_field(data_serializers_class, burger_serializer['field']).lower()
+        data_serializers_class = mappings.get_class_from_deobfuscated_name(
+            'net.minecraft.network.syncher.EntityDataSerializers'
+        )
+        mojmap_name = mappings.get_field(
+            data_serializers_class, burger_serializer['field']
+        ).lower()
 
         # mojmap names : wiki names
         name_mappings = {
@@ -51,16 +55,10 @@ def generate_metadata_names(burger_dataserializers: dict, mappings: Mappings):
             'optional_global_pos': 'Optional Global Position',
             'compound_tag': 'NBT',
             'optional_unsigned_int': 'Optional VarInt',
-            'vec3': 'Vector3'
+            'vec3': 'Vector3',
         }
 
-        serializer_names[burger_serializer['id']] = name_mappings.get(mojmap_name) or mojmap_name.replace('_', ' ').title()
+        serializer_names[burger_serializer['id']] = (
+            name_mappings.get(mojmap_name) or mojmap_name.replace('_', ' ').title()
+        )
     return serializer_names
-
-def read_text() -> str:
-    return wiki_utils.read_article('entity_metadata')
-
-def replace_lines(new_text: list[str] | str, start: int, end: int):
-    return wiki_utils.replace_article_lines('entity_metadata', new_text, start, end)
-
-

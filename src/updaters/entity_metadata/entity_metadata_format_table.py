@@ -1,15 +1,19 @@
-import json
-from entity_metadata.mod import generate_metadata_names, read_text, replace_lines
-from lib.mappings import Mappings
+from ...datagen.mappings import Mappings
+from .util import generate_metadata_names
 
-def update(burger_entities_data: dict, mappings: Mappings):
-    text = read_text()
-    parsed, start_i, end_i = parse(text)
-    print(json.dumps(parsed))
-    new_text = gen(parsed, burger_entities_data, mappings)
-    replace_lines(new_text, start_i, end_i + 1)
 
-def parse(text: str) -> tuple[dict, int, int]:
+def update(text: str, burger_entities_data: dict, mappings: Mappings) -> str:
+    lines = text.splitlines()
+
+    parsed, start_i, end_i = parse(lines)
+    new_metadata_format_table_text = gen(parsed, burger_entities_data, mappings)
+
+    lines[start_i : end_i + 1] = new_metadata_format_table_text.splitlines()
+
+    return '\n'.join(lines)
+
+
+def parse(lines: list[str]) -> tuple[dict, int, int]:
     start_i = None
     end_i = None
 
@@ -26,7 +30,7 @@ def parse(text: str) -> tuple[dict, int, int]:
     current_value = None
     current_notes = None
 
-    for i, line in enumerate(text.splitlines()):
+    for i, line in enumerate(lines):
         if line == '{{Metadata type definition/begin}}':
             in_table = True
             start_i = i
@@ -44,7 +48,7 @@ def parse(text: str) -> tuple[dict, int, int]:
                 current_notes = line[2:].strip()
                 datas[current_type_name] = {
                     'value': current_value,
-                    'notes': current_notes
+                    'notes': current_notes,
                 }
 
                 current_type_name = None
@@ -52,8 +56,11 @@ def parse(text: str) -> tuple[dict, int, int]:
                 current_notes = None
     return datas, start_i, end_i
 
+
 def gen(parsed: dict, burger_entities_data: dict, mappings: Mappings):
-    data_serializer_names = generate_metadata_names(burger_entities_data['dataserializers'], mappings)
+    data_serializer_names = generate_metadata_names(
+        burger_entities_data['dataserializers'], mappings
+    )
 
     content = ''
     content += '{{Metadata type definition/begin}}\n'

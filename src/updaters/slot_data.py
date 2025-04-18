@@ -1,33 +1,32 @@
-import shutil
+import json
 import sys
-from lib import download, extract
-from wiki_utils import read_article
-import wiki_utils
+from ..context import UpdateContext
 
 
 version_id = sys.argv[1]
 
-mappings = download.get_mappings_for_version(version_id)
-burger_data = extract.get_burger_data_for_version(version_id)
 
-registries = extract.get_registries_report(version_id)
+def update(ctx: UpdateContext, text: str) -> str:
+    registries_report = ctx.registries_report()
+
+    lines = text.splitlines()
+
+    wiki_data, start_i, end_i = parse(lines)
+
+    print(json.dumps(wiki_data))
+
+    lines[start_i : end_i + 1] = gen_slot_data(
+        wiki_data, registries_report
+    ).splitlines()
+
+    return '\n'.join(lines)
 
 
-def main():
-    shutil.copy('contents/slot_data_ORIGINAL.wikitext', 'contents/slot_data.wikitext')
-
-    text = read_article('slot_data')
-    data, start_i, end_i = parse(text)
-    new_text = gen(data)
-    wiki_utils.replace_article_lines('slot_data', new_text, start_i, end_i + 1)
-
-
-def parse(text: str) -> tuple[dict, int, int]:
+def parse(lines: list[str]) -> tuple[dict, int, int]:
     start_i = None
     end_i = None
 
     i = -1
-    lines = text.splitlines()
 
     # map of like { 'minecraft:custom_data': 'Customizable data that doesn't fit any specific component.\n | As follows: ...' }
     data = {}
@@ -56,7 +55,7 @@ def parse(text: str) -> tuple[dict, int, int]:
                 line = next_line()
                 if line.strip().startswith('{|'):
                     table_depth += 1
-                if line == ' |-':
+                if line.strip() == '|-' and table_depth == 1:
                     break
                 elif line.strip() == '|}':
                     table_depth -= 1
@@ -69,27 +68,30 @@ def parse(text: str) -> tuple[dict, int, int]:
 
     return data, start_i, end_i
 
-def gen(wiki_data: dict):
-    registry = registries['minecraft:data_component_type']['entries']
+
+def gen_slot_data(wiki_data: dict, registries_report: dict) -> str:
+    registry = registries_report['minecraft:data_component_type']['entries']
 
     content = ''
 
-    content += '''{| class="wikitable"
+    content += """{| class="wikitable"
  ! Type
  ! Name
  ! Description
  ! style="width: 50%" | Data
-'''
+"""
 
     entry_ids = [None] * len(registry)
     for resource_id, entry in registry.items():
         entry_ids[entry['protocol_id']] = resource_id
 
     for protocol_id, resource_id in enumerate(entry_ids):
-        content += f' |-\n'
+        content += ' |-\n'
         content += f' | {protocol_id}\n'
         content += f' | <code>{resource_id}</code>\n'
-        description = wiki_data.get(resource_id) or ''' | TODO
+        description = (
+            wiki_data.get(resource_id)
+            or """ | TODO
  | As follows:
    {| class="wikitable"
     ! Name
@@ -100,13 +102,10 @@ def gen(wiki_data: dict):
     | {{Type|TODO}}
     | TODO
     |}
-'''
+"""
+        )
         content += description.rstrip() + '\n'
 
-    content += ' |}\n'        
+    content += ' |}\n'
 
     return content
-
-
-
-main()
