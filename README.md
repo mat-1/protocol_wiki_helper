@@ -33,5 +33,6 @@ You must also make sure to carefully look through the diff to make sure that the
   - Updates the metadata tables for every entity, but doesn't modify the "meaning" or "default" columns for existing entities.
 - [Slot_Data](https://minecraft.wiki/w/Minecraft_Wiki:Projects/wiki.vg_merge/Slot_Data)
   - Adds placeholder entries for new data components.
-  - Removes sections for removed components.
+  - Updates all component IDs.
+  - Removes entries for removed components.
 
