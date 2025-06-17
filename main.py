@@ -10,6 +10,7 @@ from src.updaters import (
     java_edition_protocol,
     slot_data,
     development_version,
+    command_data,
 )
 
 UPDATERS = {
@@ -17,6 +18,7 @@ UPDATERS = {
     'java_edition_protocol': java_edition_protocol,
     'slot_data': slot_data,
     'development_version': development_version,
+    'command_data': command_data,
 }
 
 BOLD = '\033[1m'
