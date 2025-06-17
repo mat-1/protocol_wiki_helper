@@ -333,9 +333,20 @@ def gen(
         else:
             # the list is of all the parents and then the entity itself
             entity_inherits = entity['metadata'][0]['entity']
-            entity_metadata = (
-                entity['metadata'][-1] if len(entity['metadata']) > 1 else None
-            )
+            entity_metadata_fields = []
+            entity_metadata_bitfields = []
+            entity_metadata_class = entity['metadata'][-1]['class']
+            # burger includes multiple items if the parent wasn't known
+            for metadata_item in entity['metadata']:
+                entity_metadata_fields.extend(metadata_item.get('data', []))
+                entity_metadata_bitfields.extend(metadata_item.get('bitfields', []))
+            entity_metadata = {
+                'class': entity_metadata_class,
+                'data': entity_metadata_fields,
+                'bitfields': entity_metadata_bitfields,
+            }
+            if not entity_metadata_fields and not entity_metadata_bitfields:
+                entity_metadata = None
         print('inherits', entity_inherits)
 
         # === Interaction ===

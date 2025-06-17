@@ -1,8 +1,5 @@
 import re
-import sys
 from ..context import UpdateContext
-
-version_id = sys.argv[1]
 
 
 def update(ctx: UpdateContext, text: str) -> str:
@@ -11,7 +8,7 @@ def update(ctx: UpdateContext, text: str) -> str:
 
     text = re.sub(
         r'(?<=for \[\[Minecraft Wiki:Projects/wiki\.vg merge/Protocol version numbers\|)(\d+\.\d+\.\d+), protocol (\d+)',
-        f'{version_id}, protocol {protocol_version_id}',
+        f'{ctx.version}, protocol {protocol_version_id}',
         text,
         count=1,
     )
@@ -104,6 +101,15 @@ def parse_packets(lines: list[str]) -> tuple[dict, int, int]:
 def generate(wiki_data: dict, packets_report: dict) -> str:
     content = ''
 
+    # used for identifying packets with the same name in multiple states
+    resource_ids_to_states = {}
+    for state_name, state_packets in packets_report.items():
+        for direction_name, direction_packets in state_packets.items():
+            for resource_id in direction_packets:
+                if resource_id not in resource_ids_to_states:
+                    resource_ids_to_states[resource_id] = set()
+                resource_ids_to_states[resource_id].add(state_name)
+
     for state_name in wiki_data:
         wiki_state_data = wiki_data[state_name]
         content += f'== {state_name} ==\n'
@@ -129,8 +135,8 @@ def generate(wiki_data: dict, packets_report: dict) -> str:
                     wiki_direction_data['packets'].pop(wiki_name)
                     del resource_id_to_wiki_name[resource_id]
 
-            for resource_id, packet_data in vanilla_packets.items():
-                resource_id = resource_id.split(':')[1]
+            for original_resource_id, packet_data in vanilla_packets.items():
+                resource_id = original_resource_id.split(':')[1]
                 if resource_id in resource_id_to_wiki_name:
                     # update the protocol id
                     wiki_name = resource_id_to_wiki_name[resource_id]
@@ -140,6 +146,9 @@ def generate(wiki_data: dict, packets_report: dict) -> str:
                 else:
                     # insert into the wiki data
                     generated_wiki_name = resource_id.replace('_', ' ').title()
+                    # if the resource id is present in any other states, then add the current state in parentheses
+                    if len(resource_ids_to_states[original_resource_id]) > 1:
+                        generated_wiki_name += f' ({state_name.lower()})'
 
                     wikitext = 'TODO\n\n'
 

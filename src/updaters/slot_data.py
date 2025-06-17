@@ -1,8 +1,4 @@
-import sys
 from ..context import UpdateContext
-
-
-version_id = sys.argv[1]
 
 
 def update(ctx: UpdateContext, text: str) -> str:
@@ -33,7 +29,7 @@ def parse(lines: list[str]) -> tuple[dict, int, int]:
         i += 1
         return lines[i]
 
-    while next_line() != '== Structured components ==':
+    while next_line() != '= Structured components =':
         pass
     while next_line() != '{| class="wikitable"':
         pass
