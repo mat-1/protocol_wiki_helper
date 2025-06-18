@@ -7,15 +7,15 @@ from src.context import UpdateContext
 
 from src.updaters import (
     entity_metadata,
-    java_edition_protocol,
     slot_data,
     development_version,
     command_data,
 )
+from updaters import packets
 
 UPDATERS = {
     'entity_metadata': entity_metadata,
-    'java_edition_protocol': java_edition_protocol,
+    'packets': packets,
     'slot_data': slot_data,
     'development_version': development_version,
     'command_data': command_data,
