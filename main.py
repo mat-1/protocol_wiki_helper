@@ -10,8 +10,8 @@ from src.updaters import (
     slot_data,
     development_version,
     command_data,
+    packets,
 )
-from updaters import packets
 
 UPDATERS = {
     'entity_metadata': entity_metadata,
