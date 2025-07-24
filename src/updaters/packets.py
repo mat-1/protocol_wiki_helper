@@ -13,6 +13,20 @@ def update(ctx: UpdateContext, text: str) -> str:
         count=1,
     )
 
+    text = re.sub(
+        r'\(currently (\d+) in Minecraft (\d+\.\d+\.\d+)\)\.',
+        f'(currently {protocol_version_id} in Minecraft {ctx.version}).',
+        text,
+        count=1,
+    )
+
+    text = re.sub(
+        r'pack with version <code>(\d+\.\d+\.\d+)</code>',
+        f'pack with version <code>{ctx.version}</code>',
+        text,
+        count=1,
+    )
+
     lines = text.splitlines()
     parsed_packets, start_i, end_i = parse_packets(lines)
     new_packets_text = generate(parsed_packets, packets_report)
