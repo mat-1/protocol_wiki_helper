@@ -10,14 +10,16 @@ uv run python main.py <new version> <article name>
 # Example: uv run python main.py 1.21.6 packets
 ```
 
-After running those commands, the program will first ask you to paste the article wikitext into a file.
-When it finishes generating, it'll write the new wikitext into a different file and tell you its path.
+After running those commands, the program will first ask you to paste the
+article wikitext into a file. It'll run a few data extractors, and when it's
+done it'll write the new wikitext into a different file and tell you its path.
 
-Note that this script will *not* do everything for you.
-It merely provides a less tedious starting point for you to work on updating the wiki.
+Note that this script will *not* do everything for you. It merely provides a
+less tedious starting point for you to work on updating the wiki.
 
-It will sometimes include "todo"s for you to look at, but those will not always be generated for every protocol change.
-You must also make sure to carefully look through the diff to make sure that the script did not mess up anything important.
+For some changes, it'll generate "todo" comments for you to look at. You should
+carefully look through the diff to make sure that everything was updated
+correctly.
 
 ## Supported articles
 
