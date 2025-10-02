@@ -278,6 +278,7 @@ def gen(
             '~abstract_chested_horse': 'Chested Horse',
             '~abstract_vehicle': 'Abstract Vehicle',
             '~abstract_piglin': 'Base Piglin',
+            '~abstract_avatar': 'Avatar',
             # # incorrect Minecraft Wiki names go here, they'll get replaced by
             # # the correct en_us.json names
             # 'experience_bottle': 'Thrown Experience Bottle',
@@ -338,7 +339,10 @@ def gen(
             entity_metadata_class = entity['metadata'][-1]['class']
             # burger includes multiple items if the parent wasn't known
             for metadata_item in entity['metadata']:
-                entity_metadata_fields.extend(metadata_item.get('data', []))
+                for metadata_item_data in metadata_item.get('data', []):
+                    if 'class' in metadata_item:
+                        metadata_item_data['class'] = metadata_item['class']
+                    entity_metadata_fields.append(metadata_item_data)
                 entity_metadata_bitfields.extend(metadata_item.get('bitfields', []))
             entity_metadata = {
                 'class': entity_metadata_class,
@@ -408,7 +412,8 @@ def gen(
                 print('  wiki_metadata_field', wiki_metadata_field)
 
             mojmap_field_name = mappings.get_field(
-                entity_metadata['class'], metadata_field['field']
+                metadata_field.get('class', entity_metadata['class']),
+                metadata_field['field'],
             )
 
             cleaned_mojmap_field_name = mojmap_field_name

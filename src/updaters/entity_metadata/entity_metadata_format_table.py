@@ -42,7 +42,11 @@ def parse(lines: list[str]) -> tuple[dict, int, int]:
                 in_table = False
                 end_i = i
                 break
-            elif line.startswith(' | ({{Type|') or line.startswith(' | {{Type|'):
+            elif (
+                line.startswith(' | ({{Type|')
+                or line.startswith(' | {{Type|')
+                or line.startswith(' | [[#')
+            ):
                 current_value = line[3:]
             elif line.startswith(' |'):
                 current_notes = line[2:].strip()
