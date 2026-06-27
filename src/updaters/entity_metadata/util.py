@@ -1,7 +1,5 @@
 from typing import Optional
 
-from ...datagen.mappings import Mappings
-
 
 def determine_field_default(default: str, serializer: str):
     if default is None:
@@ -29,18 +27,12 @@ def determine_field_default(default: str, serializer: str):
     return default
 
 
-def generate_metadata_names(burger_dataserializers: dict, mappings: Mappings):
+def generate_metadata_names(burger_dataserializers: dict):
     serializer_names: list[Optional[str]] = [None] * len(burger_dataserializers)
     for burger_serializer in burger_dataserializers.values():
         print(burger_serializer)
 
-        # burger gives us the wrong class, so we do this instead
-        data_serializers_class = mappings.get_class_from_deobfuscated_name(
-            'net.minecraft.network.syncher.EntityDataSerializers'
-        )
-        mojmap_name = mappings.get_field(
-            data_serializers_class, burger_serializer['field']
-        ).lower()
+        mojmap_name = burger_serializer['field'].lower()
 
         # mojmap names : wiki names
         name_mappings = {

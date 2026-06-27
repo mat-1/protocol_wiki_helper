@@ -1,4 +1,3 @@
-from ...datagen.mappings import Mappings
 from ...datagen.utils import to_snake_case
 from .util import (
     determine_field_default,
@@ -6,10 +5,10 @@ from .util import (
 )
 
 
-def update(text: str, burger_entities_data: dict, mappings: Mappings) -> str:
+def update(text: str, burger_entities_data: dict) -> str:
     lines = text.splitlines()
     parsed, start_i, end_i = parse(lines)
-    new_metadata_table_text = gen(parsed, burger_entities_data, mappings)
+    new_metadata_table_text = gen(parsed, burger_entities_data)
 
     lines[start_i + 2 : end_i] = new_metadata_table_text.splitlines()
 
@@ -222,9 +221,7 @@ def parse(lines: list[str]) -> tuple[list, int, int]:
     return (entries, section_start_i, section_end_i)
 
 
-def gen(
-    parsed_entity_metadata_tables: list, burger_entities_data: dict, mappings: Mappings
-) -> str:
+def gen(parsed_entity_metadata_tables: list, burger_entities_data: dict) -> str:
     content = ''
 
     entities_map = burger_entities_data['entity']
@@ -252,7 +249,7 @@ def gen(
     traverse('~abstract_entity')
 
     data_serializer_names = generate_metadata_names(
-        burger_entities_data['dataserializers'], mappings
+        burger_entities_data['dataserializers']
     )
 
     content = ''
@@ -411,10 +408,7 @@ def gen(
                     pass
                 print('  wiki_metadata_field', wiki_metadata_field)
 
-            mojmap_field_name = mappings.get_field(
-                metadata_field.get('class', entity_metadata['class']),
-                metadata_field['field'],
-            )
+            mojmap_field_name = metadata_field['field']
 
             cleaned_mojmap_field_name = mojmap_field_name
             if cleaned_mojmap_field_name.startswith('DATA_ID_'):
@@ -517,15 +511,7 @@ def gen(
                 # sort bitfields by mask
                 for bitfield in sorted(bitfields, key=lambda x: x['mask']):
                     print('bitfield', bitfield)
-                    bitfield_mojmap_field_name = (
-                        mappings.get_method(
-                            bitfield.get('class') or entity_metadata['class'],
-                            bitfield['method'],
-                            '',
-                        )
-                        if 'method' in bitfield
-                        else None
-                    )
+                    bitfield_mojmap_field_name = bitfield.get('method')
                     if bitfield_mojmap_field_name:
                         cleaned_bitfield_mojmap_field_name = to_snake_case(
                             bitfield_mojmap_field_name

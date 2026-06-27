@@ -159,7 +159,9 @@ def generate(wiki_data: dict, packets_report: dict) -> str:
                     )
                 else:
                     # insert into the wiki data
-                    generated_wiki_name = resource_id.replace('_', ' ').title()
+                    generated_wiki_name = (
+                        resource_id.replace('_', ' ').replace('/', ' ').title()
+                    )
                     # if the resource id is present in any other states, then add the current state in parentheses
                     if len(resource_ids_to_states[original_resource_id]) > 1:
                         generated_wiki_name += f' ({state_name.lower()})'

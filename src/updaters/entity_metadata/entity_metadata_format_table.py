@@ -1,12 +1,11 @@
-from ...datagen.mappings import Mappings
 from .util import generate_metadata_names
 
 
-def update(text: str, burger_entities_data: dict, mappings: Mappings) -> str:
+def update(text: str, burger_entities_data: dict) -> str:
     lines = text.splitlines()
 
     parsed, start_i, end_i = parse(lines)
-    new_metadata_format_table_text = gen(parsed, burger_entities_data, mappings)
+    new_metadata_format_table_text = gen(parsed, burger_entities_data)
 
     lines[start_i : end_i + 1] = new_metadata_format_table_text.splitlines()
 
@@ -61,9 +60,9 @@ def parse(lines: list[str]) -> tuple[dict, int, int]:
     return datas, start_i, end_i
 
 
-def gen(parsed: dict, burger_entities_data: dict, mappings: Mappings):
+def gen(parsed: dict, burger_entities_data: dict):
     data_serializer_names = generate_metadata_names(
-        burger_entities_data['dataserializers'], mappings
+        burger_entities_data['dataserializers']
     )
 
     content = ''

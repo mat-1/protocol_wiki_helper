@@ -5,9 +5,8 @@ A tool for helping update certain protocol-related articles on the Minecraft Wik
 ## Usage
 
 ```sh
-uv sync
-uv run python main.py <new version> <article name>
-# Example: uv run python main.py 1.21.6 packets
+uv run main.py <new version> <article name>
+# Example: uv run main.py 1.21.6 packets
 ```
 
 After running those commands, the program will first ask you to paste the

@@ -4,7 +4,6 @@ from .datagen import download, extract
 class UpdateContext:
     __slots__ = (
         'version',
-        '_mappings',
         '_burger_data',
         '_registries',
         '_packets',
@@ -14,7 +13,6 @@ class UpdateContext:
     def __init__(self, version: str):
         self.version = version
 
-        self._mappings = None
         self._burger_data = None
         self._registries = None
         self._packets = None
@@ -23,14 +21,6 @@ class UpdateContext:
     def protocol_version(self):
         burger_data = self.burger_data()
         return burger_data[0]['version']['protocol']
-
-    #
-
-    def mappings(self):
-        if self._mappings is None:
-            self._mappings = download.get_mappings_for_version(self.version)
-
-        return self._mappings
 
     def burger_data(self):
         if self._burger_data is None:

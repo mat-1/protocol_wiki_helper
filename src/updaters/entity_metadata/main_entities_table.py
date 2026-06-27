@@ -74,8 +74,8 @@ def gen(parsed_main_entities_table: dict, burger_entities_data: dict) -> str:
 |- 
 ! Type
 ! Name
-! bounding box x and z
-! bounding box y
+! bounding box width
+! bounding box height
 ! ID
 """
 
